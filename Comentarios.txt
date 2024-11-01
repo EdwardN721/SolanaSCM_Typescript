@@ -1,0 +1,9 @@
+Instrucciones en terminal
+1) cargo clean
+2) cargo update
+3) cargo build
+4) anchor clean
+5) anchor build
+6) anchor test
+7) anchor deploy
+

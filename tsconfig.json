@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "ES6",
+    "module": "commonjs",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,  // Agrega esta línea
+    "typeRoots": [
+      "./node_modules/@types",
+      "./target/types"  // Asegúrate de que esto apunte a tus tipos generados
+    ]
+  },
+  "include": ["./src/**/*.ts", "./tests/**/*.ts"],  // Asegúrate de incluir tus directorios de pruebas
+  "exclude": ["node_modules"]
+}

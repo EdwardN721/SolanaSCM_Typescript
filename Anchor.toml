@@ -1,0 +1,24 @@
+[toolchain]
+# Especifica la versión de Rust y otras herramientas de compilación (opcional)
+
+[features]
+# Habilita características adicionales
+resolution = true  # Permite la resolución de cuentas
+skip-lint = false   # Habilita la verificación de linter
+
+[programs.localnet]
+# Define el ID del programa en la red local
+solana_program = "A5i8uPKdCycDG3nbGCCAUiLzHEc4ddpfeYGQhPEWuaTJ"  # Reemplaza con el ID real de tu programa
+
+[registry]
+# Configura el registro para la implementación de programas (opcional)
+url = "https://api.devnet.solana.com"
+
+[provider]
+# Configura el proveedor para interactuar con la red
+cluster = "devnet"  # Puedes cambiar a 'mainnet-beta' o otra red
+wallet = "~/.config/solana/id.json"  # Ruta a tu archivo de billetera
+
+[scripts]
+# Define scripts personalizados
+test = "yarn test"  # Comando para ejecutar pruebas
