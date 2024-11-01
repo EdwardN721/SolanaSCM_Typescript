@@ -1,21 +1,17 @@
 use anchor_lang::prelude::*; // Incluye el prelude para simplificar imports en Anchor
-use anchor_lang::Accounts; // Importa Accounts para definir contextos específicos de cuentas
+
 declare_id!("A5i8uPKdCycDG3nbGCCAUiLzHEc4ddpfeYGQhPEWuaTJ"); // Identificador único del programa en Solana
 
 #[program]
 pub mod registry_project {
     use super::*;
 
-    /// Crea un nuevo registro de dispositivos.
-    /// Parámetros:
-    /// - `name`: Nombre del registro, máximo 64 caracteres.
     pub fn create_registry(ctx: Context<CreateRegistry>, name: String) -> Result<()> {
         // Validar longitud del nombre
         if name.len() > 64 {
             return Err(RegistryError::NameTooLong.into());
         }
 
-        // Inicializar el registro con datos predeterminados
         let registry = &mut ctx.accounts.registry;
         registry.name = name;
         registry.owner_id = *ctx.accounts.user.key;
@@ -25,18 +21,12 @@ pub mod registry_project {
 
         Ok(())
     }
-    
-    /// Agrega un dispositivo a un registro existente.
-    /// Parámetros:
-    /// - `name`: Nombre del dispositivo.
-    /// - `description`: Descripción del dispositivo.
-    /// - `metadata`: Información adicional en formato clave-valor.
-    /// - `data`: Datos del dispositivo en formato clave-valor.
+
     pub fn add_device(
-        ctx: Context<AddDevice>, 
-        name: String, 
-        description: String, 
-        metadata: Vec<(String, String)>, 
+        ctx: Context<AddDevice>,
+        name: String,
+        description: String,
+        metadata: Vec<(String, String)>,
         data: Vec<(String, String)>
     ) -> Result<()> {
         let registry = &mut ctx.accounts.registry;
@@ -45,7 +35,7 @@ pub mod registry_project {
         if registry.devices.iter().any(|(n, _)| *n == name) {
             return Err(RegistryError::DeviceNotFound.into());
         }
-    
+
         // Crear el nuevo dispositivo y agregarlo al registro
         let device = Device {
             name: name.clone(),
@@ -53,17 +43,13 @@ pub mod registry_project {
             metadata,
             data,
         };
-        
+
         registry.device_count += 1;
         registry.device_ids.push(ctx.accounts.device.key());
         registry.devices.push((name, device));
         Ok(())
     }
 
-    /// Actualiza la metadata de un dispositivo existente.
-    /// Parámetros:
-    /// - `name`: Nombre del dispositivo.
-    /// - `metadata`: Nueva metadata en formato clave-valor.
     pub fn set_device_metadata(
         ctx: Context<SetDeviceMetadata>,
         name: String,
@@ -77,10 +63,6 @@ pub mod registry_project {
         Ok(())
     }
 
-    /// Actualiza los datos de un dispositivo existente.
-    /// Parámetros:
-    /// - `name`: Nombre del dispositivo.
-    /// - `data`: Nuevos datos en formato clave-valor.
     pub fn set_device_data(
         ctx: Context<SetDeviceData>,
         name: String,
@@ -94,12 +76,6 @@ pub mod registry_project {
         Ok(())
     }
 
-    /// Establece un parámetro específico de metadata para un dispositivo en un registro.
-    /// Parámetros:
-    /// - `registry_name`: Nombre del registro.
-    /// - `device_name`: Nombre del dispositivo.
-    /// - `param`: Clave del parámetro a modificar.
-    /// - `value`: Nuevo valor del parámetro.
     pub fn set_device_metadata_param(
         ctx: Context<SetDeviceMetadataParam>,
         registry_name: String,
@@ -108,7 +84,7 @@ pub mod registry_project {
         value: String,
     ) -> Result<()> {
         let contract = &mut ctx.accounts.contract;
-        
+
         // Buscar el registro y validar que el usuario es el propietario
         let registry = contract.registries.iter_mut()
             .find(|(n, _)| *n == registry_name)
@@ -138,7 +114,13 @@ pub struct Registry {
 }
 
 impl Registry {
-    const LEN: usize = 8 + 32 + 4 + 4 + 64 + 4 + (32 * 100); // Ajustar el tamaño total de la cuenta según los requisitos
+    const MAX_DEVICES: usize = 100;
+    const MAX_NAME_LENGTH: usize = 64;
+    const MAX_DEVICE_ID_SIZE: usize = 32;
+    const MAX_METADATA_LENGTH: usize = 256;
+    const MAX_DESCRIPTION_LENGTH: usize = 256;
+
+    const LEN: usize = 8 + 8 + (Self::MAX_DEVICES * Self::MAX_DEVICE_ID_SIZE) + (Self::MAX_NAME_LENGTH + 4) + 32 + (Self::MAX_DEVICES * (Self::MAX_NAME_LENGTH + Self::MAX_METADATA_LENGTH + Self::MAX_DESCRIPTION_LENGTH + 4 + 4));
 }
 
 #[account]
@@ -149,9 +131,17 @@ pub struct Device {
     pub description: String,
 }
 
+impl Device {
+    const MAX_NAME_LENGTH: usize = 64;
+    const MAX_METADATA_LENGTH: usize = 256;
+    const MAX_DESCRIPTION_LENGTH: usize = 256;
+
+    const LEN: usize = 8 + (Self::MAX_NAME_LENGTH + 4) + (Self::MAX_METADATA_LENGTH * 2 + 4) + (Self::MAX_DESCRIPTION_LENGTH + 4);
+}
+
 #[account]
 pub struct Contract {
-    pub registries: Vec<(String, Registry)>, // Lista de registros en el contrato.
+    pub registries: Vec<(String, Registry)>,
 }
 
 #[derive(Accounts)]
@@ -160,15 +150,16 @@ pub struct CreateRegistry<'info> {
     pub registry: Account<'info, Registry>,
     #[account(mut)]
     pub user: Signer<'info>,
-    pub system_program: Program<'info, System>, // Incluir system_program para las inicializaciones de cuentas
+    pub system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)]
 pub struct AddDevice<'info> {
     #[account(mut)]
-    pub registry: Account<'info, Registry>, // Referencia al registro existente
+    pub registry: Account<'info, Registry>,
+    #[account(init, payer = user, space = Device::LEN)]
+    pub device: Account<'info, Device>,
     #[account(mut)]
-    pub device: Account<'info, Device>, // Referencia al nuevo dispositivo
     pub user: Signer<'info>,
     pub system_program: Program<'info, System>,
 }

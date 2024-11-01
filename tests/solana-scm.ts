@@ -2,6 +2,8 @@ import * as anchor from "@coral-xyz/anchor"; // Importa el framework Anchor para
 import { Program } from "@coral-xyz/anchor"; // Importa tipos de programa de Anchor
 import { RegistryProject, Registry } from "../target/types/registry_project"; // Importa los tipos generados del programa
 import { assert } from "chai"; // Importa Chai para hacer aserciones en las pruebas
+import { SystemProgram } from "@solana/web3.js";
+
 
 // Describe el conjunto de pruebas para el proyecto
 describe("my-project", () => {
@@ -44,7 +46,7 @@ describe("my-project", () => {
         .accounts({
           registry: registryAccount.publicKey, // La cuenta del registro
           user: provider.wallet.publicKey, // Cuenta del usuario que crea el registro
-          systemProgram: anchor.web3.SystemProgram.programId, // Identificador del programa de sistema
+          system_program: anchor.web3.SystemProgram.programId
         })
         .signers([registryAccount]) // Especifica la cuenta de registro como firmante
         .rpc(); // Ejecuta la transacción en la red
@@ -72,7 +74,7 @@ describe("my-project", () => {
           registry: registryAccount.publicKey, // La cuenta del registro al que se añadirá el dispositivo
           device: deviceAccount.publicKey, // La cuenta del nuevo dispositivo
           user: provider.wallet.publicKey, // Cuenta del usuario que añade el dispositivo
-          systemProgram: anchor.web3.SystemProgram.programId, // Identificador del programa de sistema
+          system_program: anchor.web3.SystemProgram.programId, // Identificador del programa de sistema
         })
         .signers([deviceAccount]) // Especifica la cuenta del dispositivo como firmante
         .rpc(); // Ejecuta la transacción en la red
