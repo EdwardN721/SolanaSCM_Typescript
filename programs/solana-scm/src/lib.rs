@@ -1,19 +1,21 @@
-use anchor_lang::prelude::*; // Esto incluye ProgramResult
-use anchor_lang::Accounts; // Importa Accounts específicamente para definir contextos.
-declare_id!("A5i8uPKdCycDG3nbGCCAUiLzHEc4ddpfeYGQhPEWuaTJ"); // Identificador del programa en Solana.
+use anchor_lang::prelude::*; // Incluye el prelude para simplificar imports en Anchor
+use anchor_lang::Accounts; // Importa Accounts para definir contextos específicos de cuentas
+declare_id!("A5i8uPKdCycDG3nbGCCAUiLzHEc4ddpfeYGQhPEWuaTJ"); // Identificador único del programa en Solana
 
 #[program]
 pub mod registry_project {
     use super::*;
 
-    /// Función para crear un nuevo registro de dispositivos.
+    /// Crea un nuevo registro de dispositivos.
     /// Parámetros:
-    /// - `name`: Nombre del registro.
+    /// - `name`: Nombre del registro, máximo 64 caracteres.
     pub fn create_registry(ctx: Context<CreateRegistry>, name: String) -> Result<()> {
+        // Validar longitud del nombre
         if name.len() > 64 {
             return Err(RegistryError::NameTooLong.into());
         }
 
+        // Inicializar el registro con datos predeterminados
         let registry = &mut ctx.accounts.registry;
         registry.name = name;
         registry.owner_id = *ctx.accounts.user.key;
@@ -24,14 +26,12 @@ pub mod registry_project {
         Ok(())
     }
     
-    
-
     /// Agrega un dispositivo a un registro existente.
     /// Parámetros:
     /// - `name`: Nombre del dispositivo.
     /// - `description`: Descripción del dispositivo.
-    /// - `metadata`: Metadata en formato clave-valor.
-    /// - `data`: Información del dispositivo en formato clave-valor.
+    /// - `metadata`: Información adicional en formato clave-valor.
+    /// - `data`: Datos del dispositivo en formato clave-valor.
     pub fn add_device(
         ctx: Context<AddDevice>, 
         name: String, 
@@ -40,12 +40,13 @@ pub mod registry_project {
         data: Vec<(String, String)>
     ) -> Result<()> {
         let registry = &mut ctx.accounts.registry;
-        
-        // Validar que el dispositivo no exista ya
+
+        // Validar que el dispositivo no exista
         if registry.devices.iter().any(|(n, _)| *n == name) {
             return Err(RegistryError::DeviceNotFound.into());
         }
     
+        // Crear el nuevo dispositivo y agregarlo al registro
         let device = Device {
             name: name.clone(),
             description,
@@ -58,9 +59,11 @@ pub mod registry_project {
         registry.devices.push((name, device));
         Ok(())
     }
-    
 
-    /// Modifica la metadata de un dispositivo existente.
+    /// Actualiza la metadata de un dispositivo existente.
+    /// Parámetros:
+    /// - `name`: Nombre del dispositivo.
+    /// - `metadata`: Nueva metadata en formato clave-valor.
     pub fn set_device_metadata(
         ctx: Context<SetDeviceMetadata>,
         name: String,
@@ -74,7 +77,10 @@ pub mod registry_project {
         Ok(())
     }
 
-    /// Modifica los datos de un dispositivo existente.
+    /// Actualiza los datos de un dispositivo existente.
+    /// Parámetros:
+    /// - `name`: Nombre del dispositivo.
+    /// - `data`: Nuevos datos en formato clave-valor.
     pub fn set_device_data(
         ctx: Context<SetDeviceData>,
         name: String,
@@ -88,7 +94,12 @@ pub mod registry_project {
         Ok(())
     }
 
-    /// Establece un parámetro de metadata específico para un dispositivo.
+    /// Establece un parámetro específico de metadata para un dispositivo en un registro.
+    /// Parámetros:
+    /// - `registry_name`: Nombre del registro.
+    /// - `device_name`: Nombre del dispositivo.
+    /// - `param`: Clave del parámetro a modificar.
+    /// - `value`: Nuevo valor del parámetro.
     pub fn set_device_metadata_param(
         ctx: Context<SetDeviceMetadataParam>,
         registry_name: String,
@@ -98,6 +109,7 @@ pub mod registry_project {
     ) -> Result<()> {
         let contract = &mut ctx.accounts.contract;
         
+        // Buscar el registro y validar que el usuario es el propietario
         let registry = contract.registries.iter_mut()
             .find(|(n, _)| *n == registry_name)
             .ok_or(RegistryError::RegistryNotFound)?;
@@ -106,6 +118,7 @@ pub mod registry_project {
             return Err(RegistryError::UnauthorizedAccess.into());
         }
 
+        // Buscar el dispositivo y actualizar el parámetro de metadata
         let device = registry.1.devices.iter_mut()
             .find(|(n, _)| *n == device_name)
             .ok_or(RegistryError::DeviceNotFound)?;
@@ -125,9 +138,8 @@ pub struct Registry {
 }
 
 impl Registry {
-    const LEN: usize = 8 + 32 + 4 + 4 + 64 + 4 + (32 * 100); // Ajustar según tu estructura y tamaño de los vectores
+    const LEN: usize = 8 + 32 + 4 + 4 + 64 + 4 + (32 * 100); // Ajustar el tamaño total de la cuenta según los requisitos
 }
-
 
 #[account]
 pub struct Device {
@@ -142,24 +154,23 @@ pub struct Contract {
     pub registries: Vec<(String, Registry)>, // Lista de registros en el contrato.
 }
 
-
 #[derive(Accounts)]
 pub struct CreateRegistry<'info> {
     #[account(init, payer = user, space = Registry::LEN)]
     pub registry: Account<'info, Registry>,
     #[account(mut)]
     pub user: Signer<'info>,
-    pub system_program: Program<'info, System>, // Incluir el system_program
+    pub system_program: Program<'info, System>, // Incluir system_program para las inicializaciones de cuentas
 }
 
 #[derive(Accounts)]
 pub struct AddDevice<'info> {
     #[account(mut)]
-    pub registry: Account<'info, Registry>, // Define tu estructura de registro
+    pub registry: Account<'info, Registry>, // Referencia al registro existente
     #[account(mut)]
-    pub device: Account<'info, Device>, // Define tu estructura de dispositivo
+    pub device: Account<'info, Device>, // Referencia al nuevo dispositivo
     pub user: Signer<'info>,
-    pub system_program: Program<'info, System>, // Asegúrate de incluir el sistema
+    pub system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)]
@@ -194,7 +205,7 @@ pub enum RegistryError {
     DeviceNotFound,
     #[msg("Acceso no autorizado.")]
     UnauthorizedAccess,
-    #[msg("El nombre es demasiado largo.")] // Variantes de error
+    #[msg("El nombre es demasiado largo.")]
     NameTooLong,
 }
 
